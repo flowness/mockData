@@ -34,11 +34,12 @@ class HumanProfileByWaterUserAndByHour:
     hourUsageCounter = 0
     dayUsageCounter = 0
 
-    def __init__(self, waterUserType, WaterUsageFileName, WaterUsageColumnName, WaterUserFileName):
+    def __init__(self, waterUserType, WaterUsageFileName, WaterUsageColumnName, WaterUserFileName, humanName):
         self.WaterUsageFileName = WaterUsageFileName
         self.WaterUsageColumnName = WaterUsageColumnName
         self.WaterUserFileName = WaterUserFileName
         self.waterUserType = waterUserType
+        self.humanName = humanName
         self.GetProfile()
 
     def read_waterUse_profile(self):
@@ -72,6 +73,7 @@ class HumanProfileByWaterUserAndByHour:
 
     def generateFlowwhenActive(self):
         flowRate = -1
+        global Details
         #print('Length == ' + str(len(self.waterUserProfile)))
         for x in self.waterUserProfile:
             #print('WaterUserProfile: FlowRate == ' + str(x.flowRate) + ', ProfileSecond == ' + str(x.second) + ', usageCurrentSecond == ' + str(self.usageCurrentSecond))
@@ -81,18 +83,25 @@ class HumanProfileByWaterUserAndByHour:
                 break
         if flowRate == -1:
             self.UsageActive = False
+            Details += ', ' + self.humanName + ' -> ' + ' Finished ' + self.waterUserType
             return 0
         else:
             self.usageCurrentSecond += 1
+            Details += ', ' + self.humanName + ' -> ' + self.waterUserType + ' used ' + str(flowRate)
             return flowRate
 
-    def generateUsage(self, secondInDay):
+    def generateUsage(self, secondInDay, activeHuman):
+        global Details
+
         if secondInDay%3600 == 0:
             self.hourUsageCounter = 0
 
         if self.UsageActive:
             #print('Active Toilet1')
             return(self.generateFlowwhenActive())
+
+        if activeHuman:
+            return 0
 
         if self.dayUsageCounter < self.maximumUsageInDay and self.hourUsageCounter < self.maximumUsageInHour:
             R = random.randrange(360000) #100% * 60 * 60 -> as the csv refer to chance of usage in 1 hour
@@ -114,11 +123,11 @@ class HumanProfileByWaterUserAndByHour:
                 return 0
         else:
             if self.dayUsageCounter >= self.maximumUsageInDay:
-                global Details
-                Details += ', Daily quata reached'
+                Details += ', ' + self.humanName + ' -> ' + self.waterUserType + ' reached Daily quata'
             else:
                 if self.hourUsageCounter >= self.maximumUsageInHour:
-                    Details += ', Hourly quata reached'
+                    Details += ', ' + self.humanName + ' -> ' + self.waterUserType + ' reached Hourly quata'
+
             #print('Out of daily or hourly quota')
             return 0
 
@@ -129,22 +138,51 @@ class Human:
 
     ActiveUsage = False
     secondCounter = 1
-    numOfSecondsInDay = 86400
     WaterFlowRate = 0
 
-    Toilet1Profile = []
-    Toilet2Profile = []
-    ShowerProfile = []
-    BathProfile = []
-    BathTapProfile = []
-    KitchenTapProfile = []
+    waterUsers = []
 
+
+
+    def __init__(self, fileName, humanName, profileName):
+        self.fileName = fileName
+        self.profile = None
+        self.humanName= humanName
+        self.profileName = profileName
+
+        print('Human, filName =' + self.fileName)
+
+        self.waterUsers.append(HumanProfileByWaterUserAndByHour('Toilet 1', fileName, 'Toilet1', 'Profiles/WaterUsers/Toilet1.csv', self.humanName))
+        self.waterUsers.append(HumanProfileByWaterUserAndByHour('Toilet 2', fileName, 'Toilet2', 'Profiles/WaterUsers/Toilet2.csv', self.humanName))
+        self.waterUsers.append(HumanProfileByWaterUserAndByHour('Shower', fileName, 'Shower', 'Profiles/WaterUsers/Shower.csv', self.humanName))
+
+    def generateWaterUsage(self, secondCounter):
+
+        currentFlow = 0
+        counter = 1
+        for waterUser in self.waterUsers:
+            print(str(secondCounter) + ',counter = ' + str(counter) + ', ' + self.humanName + ', ' + str(waterUser.waterUserType))
+            counter += 1
+            currentFlow += waterUser.generateUsage(secondCounter, self.ActiveUsage)
+
+        #currentFlow += self.Toilet1Profile.generateUsage(secondCounter, self.ActiveUsage)
+        #currentFlow += self.Toilet2Profile.generateUsage(secondCounter, self.ActiveUsage)
+        #currentFlow += self.ShowerProfile.generateUsage(secondCounter,self.ActiveUsage)
+
+        self.WaterFlowRate += currentFlow
+
+        return (currentFlow)
+
+class house:
+
+    humanList = []
+    numOfSecondsInDay = 86400
     WaterUsageCSVObject = None
     CSVwriter = None
+    totalWaterVolume = 0
 
     def __init__(self, fileName):
         self.fileName = fileName
-        self.profile = None
 
         self.WaterUsageCSVObject = open('waterUsage.csv', 'w', newline='')
         self.CSVwriter = csv.writer(self.WaterUsageCSVObject)
@@ -152,140 +190,44 @@ class Human:
         self.CSVwriter = csv.DictWriter(self.WaterUsageCSVObject, fieldnames=fieldnames)
         self.CSVwriter.writeheader()
 
-        print('Human, filName =' + self.fileName)
-        self.Toilet1Profile = HumanProfileByWaterUserAndByHour('Toilet 1', fileName, 'Toilet1', 'Profiles/WaterUsers/Toilet1.csv')
-
-    def generateWaterUsage(self, secondCounter):
-
-        currentFlow = 0
-
-        if not self.ActiveUsage:
-            currentFlow += self.Toilet1Profile.generateUsage(secondCounter)
-            #currentFlow += self.Toilet2Profile.generateUsage(secondCounter)
-            #currentFlow += self.ShowerProfile.generateUsage(secondCounter)
-
-            self.WaterFlowRate += currentFlow
-        return (currentFlow)
-
-    def generate24hWaterUsageProfile (self):
-        for secondCounter in range (1,self.numOfSecondsInDay): # No. of seconds in a day
-            global Details
-            Details = ''
-            currentFlow = self.generateWaterUsage(secondCounter)
-            self.writeWaterUsageToCSV(secondCounter, currentFlow)
-
-        self.WaterUsageCSVObject.close()
-
-    def writeWaterUsageToCSV (self, secondCounter, currentFlow):
-        global Details
-        self.CSVwriter.writerow({'hour' : str(int(secondCounter/3600)+1), 'second' : str(secondCounter), 'currentFlow' : str(currentFlow), 'totalFlow' : str(self.WaterFlowRate), 'details' : Details})
-
-
-
-class house:
-
-    humanList = []
-    numOfSecondsInDay = 86400
-
-    def __init__(self, fileName):
-        self.fileName = fileName
-        self.profile = None
         self.getPropertyProfile()
 
     def getPropertyProfile(self):
         with open(self.fileName, newline='') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                H = Human(str(row['ProfilePath']))
+                H = Human(str(row['ProfilePath']), str(row['name']), str(row['profileName']))
+                print(H.humanName)
                 print(H.fileName)
                 self.humanList.append(H)
 
 
     def generate24hWaterUsageProfile(self):
+        waterFlow = 0
+        secondCounter = 1
         for secondCounter in range(1, self.numOfSecondsInDay):  # No. of seconds in a day
+            waterFlow = 0
             global Details
             Details = ''
-            for cur_human in self.humanList
-            currentFlow = self.generateWaterUsage(secondCounter)
-            self.writeWaterUsageToCSV(secondCounter, currentFlow)
+            for cur_human in self.humanList:
+                waterFlow += cur_human.generateWaterUsage(secondCounter)
+            self.totalWaterVolume += waterFlow
+
+            self.writeWaterUsageToCSV(secondCounter, waterFlow)
+
+        self.WaterUsageCSVObject.close()
+
+    def writeWaterUsageToCSV (self, secondCounter, currentFlow):
+        global Details
+        self.CSVwriter.writerow({'hour' : str(int(secondCounter/3600)+1), 'second' : str(secondCounter), 'currentFlow' : str(currentFlow), 'totalFlow' : str(self.totalWaterVolume), 'details' : Details})
 
 
 # main
 
-myHome = house('Profiles/Properties/Appartment_1.csv')
 
 print('Start')
 
-person1 = Human('Profiles/Humans/Working_adult_profile.csv')
-person1.generate24hWaterUsageProfile()
+myHome = house('Profiles/Properties/Appartment_1.csv')
+myHome.generate24hWaterUsageProfile()
 
 print('End')
-
-
-
-
-
-
-
-
-
-
-
-Toilet1 = []
-Toilet2 = []
-Shower = []
-KitchenTap = []
-BathTap = []
-Bath = []
-
-
-def read_waterUse_profile (fileName, waterUser = [], *args):
-    with open(fileName, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            #print(row['second'], row['flowRate'])
-            waterUser.append(WaterUserFlow(row['second'], row['flowRate']))
-        #for userFlow in waterUser:
-            #print(userFlow)
-
-
-def csv_read_test ():
-    with open('names.csv', newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            print(row['first_name'], row['last_name'])
-
-def csv_write_test ():
-    with open('names.csv', 'w', newline='') as csvfile:
-        fieldnames = ['first_name', 'last_name']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-        writer.writeheader()
-        writer.writerow({'first_name': 'Baked', 'last_name': 'Beans'})
-        writer.writerow({'first_name': 'Lovely', 'last_name': 'Spam'})
-        writer.writerow({'first_name': 'Wonderful', 'last_name': 'Spam'})
-
-def s3_write_test ():
-    BUCKET = 'hagaytest'
-    KEY = os.urandom(32)
-    s3 = boto3.client('s3')
-
-    print("Uploading measurement")
-    s3.put_object(Bucket=BUCKET,
-                  Key='customer1',
-                  Body=b'225',
-                  Tagging=' customer=1')
-    s3.put_object(Bucket=BUCKET,
-                  Key='customer2',
-                  Body=b'225')
-    print('Done uploading measurement')
-    return 0
-
-
-
-
-
-
-
-
-
