@@ -140,7 +140,7 @@ class Human:
     secondCounter = 1
     WaterFlowRate = 0
 
-    waterUsers = []
+
 
 
 
@@ -149,6 +149,7 @@ class Human:
         self.profile = None
         self.humanName= humanName
         self.profileName = profileName
+        self.waterUsers = []
 
         print('Human, filName =' + self.fileName)
 
@@ -159,17 +160,17 @@ class Human:
     def generateWaterUsage(self, secondCounter):
 
         currentFlow = 0
-        counter = 1
+        #counter = 1
         for waterUser in self.waterUsers:
-            print(str(secondCounter) + ',counter = ' + str(counter) + ', ' + self.humanName + ', ' + str(waterUser.waterUserType))
-            counter += 1
+            #print(str(secondCounter) + ',counter = ' + str(counter) + ', ' + self.humanName + ', ' + str(waterUser.waterUserType))
+            #counter += 1
             currentFlow += waterUser.generateUsage(secondCounter, self.ActiveUsage)
 
         #currentFlow += self.Toilet1Profile.generateUsage(secondCounter, self.ActiveUsage)
         #currentFlow += self.Toilet2Profile.generateUsage(secondCounter, self.ActiveUsage)
         #currentFlow += self.ShowerProfile.generateUsage(secondCounter,self.ActiveUsage)
 
-        
+
         self.WaterFlowRate += currentFlow
 
         return (currentFlow)
@@ -198,8 +199,8 @@ class house:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 H = Human(str(row['ProfilePath']), str(row['name']), str(row['profileName']))
-                print(H.humanName)
-                print(H.fileName)
+                #print(H.humanName)
+                #print(H.fileName)
                 self.humanList.append(H)
 
 
