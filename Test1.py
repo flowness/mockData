@@ -168,7 +168,7 @@ class Human:
         #currentFlow += self.Toilet1Profile.generateUsage(secondCounter, self.ActiveUsage)
         #currentFlow += self.Toilet2Profile.generateUsage(secondCounter, self.ActiveUsage)
         #currentFlow += self.ShowerProfile.generateUsage(secondCounter,self.ActiveUsage)
-
+        
         self.WaterFlowRate += currentFlow
 
         return (currentFlow)
