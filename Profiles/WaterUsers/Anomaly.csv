@@ -1,0 +1,4 @@
+Anomaly,Toilet1,Toilet2,Bath,Shower,Bath Tap,Kitchen Tap
+Duration,5,5,20,20,40,40
+Flow,5,5,20,20,40,40
+Recess,0,0,90,70,40,30

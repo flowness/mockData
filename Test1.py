@@ -33,6 +33,8 @@ class HumanProfileByWaterUserAndByHour:
     maximumUsageInDay = 0
     hourUsageCounter = 0
     dayUsageCounter = 0
+    anomalyFlow = 0
+
 
     def __init__(self, waterUserType, WaterUsageFileName, WaterUsageColumnName, WaterUserFileName, humanName):
         self.WaterUsageFileName = WaterUsageFileName
@@ -42,6 +44,18 @@ class HumanProfileByWaterUserAndByHour:
         self.humanName = humanName
         self.GetProfile()
 
+    def getAnomalyProfile(self):
+        with open('Profiles/WaterUsers/Anomaly.csv', newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row['Anomaly'] == 'Duration':
+                    self.anomalyDuration = int(row[self.WaterUsageColumnName])
+                if row['Anomaly'] == 'Flow':
+                    self.anomalyFlow = int(row[self.WaterUsageColumnName])
+                if row['Anomaly'] == 'Recess':
+                    self.anomalyRecess = int(row[self.WaterUsageColumnName])
+
+
     def read_waterUse_profile(self):
         with open(self.WaterUserFileName, newline='') as csvfile:
             reader = csv.DictReader(csvfile)
@@ -49,6 +63,7 @@ class HumanProfileByWaterUserAndByHour:
                 #W = WaterUserFlow(int(row['second']), int(row['flowRate']))
                 #print(W)
                 self.waterUserProfile.append(WaterUserFlow(int(row['second']), int(row['flowRate'])))
+
 
     def getGeneralUsageProfile(self):
         with open('Profiles/Humans/General.csv', newline='') as csvfile:
@@ -70,6 +85,13 @@ class HumanProfileByWaterUserAndByHour:
                 self.profile.append(W)
         self.getGeneralUsageProfile()
         self.read_waterUse_profile()
+        self.getAnomalyProfile()
+
+    def calcAnomalyFlow(self, flowRate):
+        percentageValue = int(self.anomalyFlow*flowRate/100)
+        AnomalyFlowChange = random.randrange(0-percentageValue,percentageValue)
+        return flowRate+AnomalyFlowChange
+
 
     def generateFlowwhenActive(self):
         flowRate = -1
@@ -78,7 +100,8 @@ class HumanProfileByWaterUserAndByHour:
         for x in self.waterUserProfile:
             #print('WaterUserProfile: FlowRate == ' + str(x.flowRate) + ', ProfileSecond == ' + str(x.second) + ', usageCurrentSecond == ' + str(self.usageCurrentSecond))
             if x.second == self.usageCurrentSecond:
-                flowRate = x.flowRate
+                #flowRate = x.flowRate
+                flowRate =self.calcAnomalyFlow(x.flowRate)
                 #print('FlowRate == ' + str(x.flowRate))
                 break
         if flowRate == -1:
